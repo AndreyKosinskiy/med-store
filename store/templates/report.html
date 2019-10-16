@@ -1,0 +1,15 @@
+ {% extends "base.html" %}
+ 
+ {% block content%}
+ <div class = "row">
+    <div class = "col-md-12 text-center">
+      <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+   <button type="submit" class="btn btn-primary">Push(+)</button>
+        <button type="submit" class="btn btn-primary">Get(-)</button>
+  </form>
+    </div>
+ </div>
+ {% endblock %}

@@ -1,0 +1,24 @@
+ {% extends "base.html" %}
+ {% load str_to_list %}
+ {% block content%}
+ <div class = "row justify-content-md-center align-items-center" style="height: 39em;">
+    <div class = "col-md-4 text-center border-primary">
+      <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="form-group">
+        <label for="{{form.attachment.id_for_label}}">Добавить квитанцию</label>
+        {{form.attachment}}
+        {{form.store}}
+        {% for field, errors in form.errors.items %}
+            {{errors|safe}}
+        {% endfor %}
+      </div>
+    
+
+   <button type="submit" class="btn btn-primary">Push(+)</button>
+        <button type="submit" class="btn btn-primary">Get(-)</button>
+  </form>
+    </div>
+ </div>
+ {% endblock %}

@@ -1,7 +1,12 @@
 from django.contrib import admin
-from .models import Store,Operation,Lot,Good,Document
+from .models import Store,Operation,Lot,ProductItem,Document,LogHandler
 
 # Register your models here.
+@admin.register(LogHandler)
+class StoreAdmin(admin.ModelAdmin):
+    model = LogHandler
+    #list_display = ['title', 'author__name', ]
+
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
     model = Store
@@ -9,11 +14,12 @@ class StoreAdmin(admin.ModelAdmin):
 
 @admin.register(Operation)
 class OperationAdmin(admin.ModelAdmin):
+    readonly_fields = ("name",'lot',"document","operation_type","qty","price")
     model = Operation
     #list_display = ['title', 'author__name', ]
 class OperationInline(admin.TabularInline):
     model = Operation
-    readonly_fields = ["name",'lot',"document","operation_type","qty"]
+    readonly_fields = ("name",'lot',"document","operation_type","qty","price")
 
 @admin.register(Lot)
 class LotAdmin(admin.ModelAdmin):
@@ -23,9 +29,9 @@ class LotAdmin(admin.ModelAdmin):
     ]
 
 
-@admin.register(Good)
+@admin.register(ProductItem)
 class GoodAdmin(admin.ModelAdmin):
-    model = Good
+    model = ProductItem
     #list_display = ['title', 'author__name', ]
 
 @admin.register(Document)
