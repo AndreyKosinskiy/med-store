@@ -1,6 +1,5 @@
 from django.shortcuts import render, redirect
-from django.core.files.storage import FileSystemStorage
-from .forms import DocumentForm
+from .forms import DocumentForm, ReportForm
 
 # Create your views here.
 def index(request):
@@ -10,7 +9,10 @@ def index(request):
         if form.is_valid():
             content = request.FILES['attachment']
             form.save()
-            return redirect('/')
+            #return redirect('/')
+            return render(request, 'add_doc.html', {
+        'form':  DocumentForm()
+    })
     else:
         form = DocumentForm()
     return render(request, 'add_doc.html', {
@@ -18,15 +20,16 @@ def index(request):
     })
 
 def report(request):
+    form = ReportForm()
     if request.method == 'POST':
-        form = ReportForm(request.POST, request.FILES)
-        document = None
+        form = ReportForm(request.POST)
+        print(form.is_valid())
+        print ( request.POST["start_date"] )
+        print ( request.POST["end_date"] )
+        print ( request.POST["store"] )
         if form.is_valid():
-            content = request.FILES['attachment']
             form.save()
-            return redirect('/')
-    else:
-        form = DocumentForm()
+            return form.save()
     return render(request, 'report.html', {
         'form': form
     })

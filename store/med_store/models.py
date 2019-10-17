@@ -1,12 +1,13 @@
 from django.db import models
 from django.core.validators import FileExtensionValidator
 from django.utils.timezone import now
-from .utils import get_info_from_excel, is_valid_or_list_error
+from .utils import get_info_from_excel, is_valid_or_list_error,build_book
+from django.utils.dateparse import parse_datetime
 # TODO:create manager for Document
 
 
 class LogHandler(models.Model):
-    #user = models.ForeignKey(User)
+    # user = models.ForeignKey(User)
     action_object = models.CharField(max_length=120, null=True)
     action_method = models.CharField(max_length=120, null=True)
     action_result = models.CharField(max_length=120, null=True)
@@ -30,7 +31,8 @@ class BaseClassObject(models.Model):
             action_method="save",
             action_result=str(self),
         )
-        super(BaseClassObject, self).save(*args, **kwargs) # Call the real save() method
+        super(BaseClassObject, self).save(
+            *args, **kwargs)  # Call the real save() method
 
     def __str__(self):
         return self.name
@@ -54,6 +56,7 @@ class Document(BaseClassObject):
 
     def get_table(self):
         return get_info_from_excel(self.attachment)['good_table']
+
     def get_doc_type(self):
         return get_info_from_excel(self.attachment)['doc_type']
 
@@ -72,7 +75,9 @@ class Document(BaseClassObject):
                     name=name
                 )
                 obj_operation = Operation.objects.create(
-                    name = obj_lot.name +' [ '+self.doc_type+' ] '+str(qty)+' штуки по цене '+str(price),
+                    name=obj_lot.name +
+                        ' [ '+self.doc_type+' ] ' +
+                            str(qty)+' штуки по цене '+str(price),
                     lot=obj_lot,
                     document=self,
                     operation_type=self.doc_type,
@@ -85,12 +90,27 @@ class Lot(BaseClassObject):
     product_item_batch = models.CharField(max_length=120)
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
 
-    def get_qty_all_operations(self):
+    def get_qty_all_operations(self, start_date=None, end_date=None):
         """
         Use it if Lot have one or more operations
         """
         result_list = []
-        operation_list = Operation.objects.filter(lot=self)
+        operation_list = None
+
+        if start_date == None and end_date == None:
+            print("start_date == None and end_date == None")
+            operation_list = Operation.objects.filter(lot=self)
+        elif start_date == None:
+            print("start_date == None")
+            operation_list = Operation.objects.filter(
+                lot=self, created_date__date__lte=start_date)
+        elif end_date == None:
+            print("end_date == None")
+            operation_list = Operation.objects.filter(
+                lot=self, created_date__date__gte=start_date)
+        else:
+            operation_list = Operation.objects.filter(
+                lot=self, created_date__range=(start_date, end_date))
         for operation in operation_list:
             if operation.operation_type == '-':
                 result_list.append(-operation.qty)
@@ -110,3 +130,24 @@ class Operation(BaseClassObject):
 class ProductItem(BaseClassObject):
     lot = models.OneToOneField(Lot, on_delete=models.CASCADE)
     description = models.TextField(default=None)
+
+
+class Report (BaseClassObject):
+    store = models.ForeignKey(Store, on_delete=models.CASCADE)
+    start_date = models.DateTimeField(editable=True)
+    end_date = models.DateTimeField(editable=True)
+
+    # def save(self, *args, **kwargs):
+        
+    #     lots_in_store = Lot.objects.filter(store = self.store)
+    #     report_table = []
+    #     print("Ау блять!")
+        
+    #     for lot in lots_in_store:
+    #         report_table.append([lot.name,lot.product_item_batch,lot.get_qty_all_operations(self.start_date,self.end_date)])
+
+    #     print(build_book([self.start_date,self.end_date],report_table))
+    #     print("END")
+    #     super(Report, self).save(*args, **kwargs) # Call the real save() method
+        
+        
