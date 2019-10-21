@@ -1,0 +1,21 @@
+ {% extends "base.html" %}
+
+ {% block registration %}
+  <div class = "row justify-content-md-center align-items-center" style="height: 39em;">
+    <div class = "col-md-4 text-center border-primary">
+      <form method="post" enctype="multipart/form-data" style="-webkit-box-shadow: 18px 11px 25px -1px rgba(245,137,5,1);-moz-box-shadow: 18px 11px 25px -1px rgba(245,137,5,1);box-shadow: 18px 11px 25px -1px rgba(245,137,5,1);background-color: #ffe0a1;-webkit-border-radius: 20px;-moz-border-radius: 20px;border-radius: 20px" class ="py-2">
+      {% csrf_token %}
+    {% for field in form %}
+      <div class="form-group px-3 py-0" >
+            {{ field.label_tag }}<br>
+            {{ field }}
+          <small style="color: red" class="form-text text-muted">{{ field.help_text }}</small>
+    </div>  
+{% for error in field.errors %}
+          <p style="color: red" class="form-text text-muted">{{ error }}</p>
+        {% endfor %}
+    {% endfor %}
+    <button type="submit" class= "btn btn-outline-success" style = "margin:10px">Sign up</button>
+  </form>
+ </div>
+ {% endblock %}

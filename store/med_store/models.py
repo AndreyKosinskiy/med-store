@@ -3,11 +3,12 @@ from django.core.validators import FileExtensionValidator
 from django.utils.timezone import now
 from .utils import get_info_from_excel, is_valid_or_list_error,build_book
 from django.utils.dateparse import parse_datetime
+from django.contrib.auth.models import User
 # TODO:create manager for Document
 
 
 class LogHandler(models.Model):
-    # user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING,blank=True, null=True)
     action_object = models.CharField(max_length=120, null=True)
     action_method = models.CharField(max_length=120, null=True)
     action_result = models.CharField(max_length=120, null=True)
@@ -19,6 +20,7 @@ class ErorrHandler(models.Model):
 
 
 class BaseClassObject(models.Model):
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING,blank=True, null=True)
     name = models.CharField(max_length=120)
     created_date = models.DateTimeField(auto_now_add=True)
 
@@ -43,11 +45,6 @@ class Store(BaseClassObject):
     empty = models.BooleanField(default=False)
 
 
-class DocumentManager(BaseClassObject):
-    def analyser(self):
-        return None
-
-
 class Document(BaseClassObject):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     doc_type = models.CharField(max_length=120, blank=True, null=True)
@@ -61,7 +58,6 @@ class Document(BaseClassObject):
         return get_info_from_excel(self.attachment)['doc_type']
 
     def save(self, *args, **kwargs):
-
         # Call the real save() method
         self.name = self.attachment.name
         self.doc_type = self.get_doc_type()
@@ -69,11 +65,18 @@ class Document(BaseClassObject):
         table = self.get_table()
         for row in table:
                 name, product_item_batch, qty, price = row[0].value, row[1].value, row[3].value, row[4].value
-                obj_lot, created = Lot.objects.get_or_create(
-                    product_item_batch=product_item_batch,
-                    store=self.store,
-                    name=name
-                )
+                lot_qs = None
+                lot_qs = Lot.objects.filter( product_item_batch=product_item_batch, store=self.store,name=name)
+
+                if lot_qs.count() == 0:
+                    obj_lot = Lot.objects.create(
+                        product_item_batch=product_item_batch,
+                        store=self.store,
+                        name=name
+                    )
+                else:
+                     obj_lot = lot_qs.first()
+
                 obj_operation = Operation.objects.create(
                     name=obj_lot.name +
                         ' [ '+self.doc_type+' ] ' +
@@ -136,18 +139,5 @@ class Report (BaseClassObject):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     start_date = models.DateTimeField(editable=True)
     end_date = models.DateTimeField(editable=True)
-
-    # def save(self, *args, **kwargs):
-        
-    #     lots_in_store = Lot.objects.filter(store = self.store)
-    #     report_table = []
-    #     print("Ау блять!")
-        
-    #     for lot in lots_in_store:
-    #         report_table.append([lot.name,lot.product_item_batch,lot.get_qty_all_operations(self.start_date,self.end_date)])
-
-    #     print(build_book([self.start_date,self.end_date],report_table))
-    #     print("END")
-    #     super(Report, self).save(*args, **kwargs) # Call the real save() method
         
         

@@ -1,9 +1,30 @@
 from django import forms
-from .models import Document
-from .utils import get_info_from_excel, is_valid_or_list_error,build_book
 from django.forms.utils import ErrorList
-from .models import Lot, Operation, Store, Report
 from django.contrib.admin import widgets
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+
+from .models import Lot, Operation, Store, Report, Document
+from .utils import get_info_from_excel, is_valid_or_list_error,build_book
+
+class SignUpForm(UserCreationForm):
+    username = forms.CharField(max_length=30, required=False, help_text='Optional.', widget = forms.TextInput(attrs={'class': 'form-control'}))
+    password1 = forms.CharField(max_length=30, widget = forms.PasswordInput(attrs={'class': 'form-control'}))
+    password2 = forms.CharField(max_length=30,  widget = forms.PasswordInput(attrs={'class': 'form-control'}))
+    email = forms.EmailField(max_length=254, help_text='Required. Inform a valid email address.', widget = forms.EmailInput(attrs={'class': 'form-control'}))
+    
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password1', 'password2', )
+
+class LogInForm(forms.Form):
+    username = forms.CharField(max_length=30, required=False, help_text='Optional.', widget = forms.TextInput(attrs={'class': 'form-control'}))
+    password1 = forms.CharField(max_length=30, widget = forms.PasswordInput(attrs={'class': 'form-control'}))
+    
+    # class Meta:
+    #     model = User
+    #     fields = ('email', 'password1' )
+
 
 
 class DivErrorList(ErrorList):
@@ -32,6 +53,7 @@ class DocumentForm(forms.ModelForm):
         kwargs_new.update(kwargs)
         super(DocumentForm, self).__init__(*args, **kwargs_new)
 
+
     def clean(self):
         cleaned_data=super().clean()
         input_document=cleaned_data.get("attachment")
@@ -43,7 +65,8 @@ class DocumentForm(forms.ModelForm):
                 if result == False:
                     self.add_error("attachment", msg+"Fail")
         else:
-            store=Store.objects.get(name=cleaned_data.get("store"))
+
+            store= Store.objects.get(name=cleaned_data.get("store"))
             for row in excel_book['good_table']:
                 name, product_item_batch, qty, price=row[0].value, row[1].value, row[3].value, row[4].value
                 # TODO: Can be in one file two or more LOT?
@@ -71,8 +94,11 @@ class DocumentForm(forms.ModelForm):
 class ReportForm(forms.Form):
     all_store = Store.objects.all()
     list_store_select = []
-    for store in all_store:
-        list_store_select.append((store.id, store.name))
+    if all_store:
+        print(all_store)
+        for store in all_store:
+            list_store_select.append((store.id, store.name))
+
 
     CHOICES = (('Option 1', 'Option 1'), ('Option 2', 'Option 2'),)
 
@@ -95,10 +121,10 @@ class ReportForm(forms.Form):
         widget=forms.Select(attrs={'class': 'custom-select'})
     )
     def save(self):
-        print(self.cleaned_data["store"])
-        print(self.cleaned_data["start_date"])
-        print(self.cleaned_data["end_date"])
+        
         store = Store.objects.get(id=self.cleaned_data["store"])
+        
+
         start_date = self.cleaned_data["start_date"]
         end_date = self.cleaned_data["end_date"]
         Report.objects.create(
