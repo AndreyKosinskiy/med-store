@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'med_store.apps.MedStoreConfig',
+    'crypto_auth.apps.CryptoAuthConfig',
     'debug_toolbar',
 ]
 
@@ -134,3 +135,5 @@ INTERNAL_IPS = [
     '127.0.0.1',
     # ...
 ]
+
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000

@@ -3,6 +3,7 @@ from django.core.validators import FileExtensionValidator
 from django.utils.timezone import now
 from .utils import get_info_from_excel, is_valid_or_list_error,build_book
 from django.utils.dateparse import parse_datetime
+import datetime
 from django.contrib.auth.models import User
 # TODO:create manager for Document
 
@@ -28,13 +29,13 @@ class BaseClassObject(models.Model):
         abstract = True
 
     def save(self, *args, **kwargs):
-        LogHandler.objects.create(
-            action_object=self.__class__,
-            action_method="save",
-            action_result=str(self),
-        )
-        super(BaseClassObject, self).save(
-            *args, **kwargs)  # Call the real save() method
+        super(BaseClassObject, self).save(*args, **kwargs)  # Call the real save() method
+        # LogHandler.objects.create(
+        #     user = self.user,
+        #     action_object=self.__class__,
+        #     action_method="save",
+        #     action_result=str(self),
+        # )
 
     def __str__(self):
         return self.name
@@ -59,25 +60,38 @@ class Document(BaseClassObject):
 
     def save(self, *args, **kwargs):
         # Call the real save() method
+        print("Model: ", self.user)
+        user = self.user
         self.name = self.attachment.name
-        self.doc_type = self.get_doc_type()
+        #self.doc_type = self.get_doc_type()
+        self.doc_type = self.operation_btn
         super(Document, self).save(*args, **kwargs)
         table = self.get_table()
+        a = datetime.datetime.now()
         for row in table:
-                name, product_item_batch, qty, price = row[0].value, row[1].value, row[3].value, row[4].value
+                #name, product_item_batch, qty, price = row[0].value, row[1].value, row[3].value, row[4].value
+                name, product_item_batch, qty, price = row[2].value, row[1].value, row[5].value, row[7].value
+                if None in (name, product_item_batch, qty, price):
+                    continue
+                if isinstance(qty,(str,)):
+                    qty = float(qty)
+                if isinstance(price,(str,)):
+                    price = float(price)
                 lot_qs = None
                 lot_qs = Lot.objects.filter( product_item_batch=product_item_batch, store=self.store,name=name)
 
                 if lot_qs.count() == 0:
                     obj_lot = Lot.objects.create(
+                        user = user,
                         product_item_batch=product_item_batch,
                         store=self.store,
                         name=name
                     )
                 else:
                      obj_lot = lot_qs.first()
-
+                c = datetime.datetime.now()
                 obj_operation = Operation.objects.create(
+                    user = user,
                     name=obj_lot.name +
                         ' [ '+self.doc_type+' ] ' +
                             str(qty)+' штуки по цене '+str(price),
@@ -87,6 +101,8 @@ class Document(BaseClassObject):
                     price=price,
                     qty=qty
                 )
+                print("Operation.objects.create: ",datetime.datetime.now()-c)
+        print("for row procces in model: ",datetime.datetime.now()-a)
 
 
 class Lot(BaseClassObject):
@@ -106,7 +122,7 @@ class Lot(BaseClassObject):
         elif start_date == None:
             print("start_date == None")
             operation_list = Operation.objects.filter(
-                lot=self, created_date__date__lte=start_date)
+                lot=self, created_date__date__lte=end_date)
         elif end_date == None:
             print("end_date == None")
             operation_list = Operation.objects.filter(
@@ -137,7 +153,7 @@ class ProductItem(BaseClassObject):
 
 class Report (BaseClassObject):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    start_date = models.DateTimeField(editable=True)
-    end_date = models.DateTimeField(editable=True)
+    start_date = models.DateTimeField(editable=True, blank=True, null=True)
+    end_date = models.DateTimeField(editable=True, blank=True, null=True)
         
         

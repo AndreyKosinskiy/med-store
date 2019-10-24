@@ -20,17 +20,48 @@
             <div class="input-group-text"><i class="fa fa-calendar"></i></div>
           </div>
         </div>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" value="" id="defaultCheck1">
-           <label class="form-check-label" for="defaultCheck1">
-            Open?
-          </label>
-        </div>
       </div>
-   <button type="submit" class="btn btn-success">Report</button>
+   <button type="submit" class="btn btn-success" onclick="return foo();">Report</button>
+
+
+   {% if table %}
+       {% if table.0 and table.1 %}
+        <h2>Зріз c {{table.0}} по {{table.1}}</h2>
+    {% elif not table.0 and table.1 %}
+         <h2>Зріз до {{table.1}}</h2>
+    {% else %}
+        <h2>Зріз до {% now "d/m/Y" %}</h2>
+    {% endif %}
+   <table class="table table-bordered table-sm">
+  <thead>
+    <tr>
+      <th scope="col">№</th>
+      <th scope="col">Назва</th>
+      <th scope="col">Партия</th>
+      <th scope="col">Кількість</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in table.2 %}
+    <tr>
+      <th scope="row">{{forloop.counter}}</th>
+      <td class = "text-left">{{row.0}}</td>
+      <td class = "text-left">{{row.1}}</td>
+      <td class = "text-left">{{row.2}}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+   {% endif%}
   </form>
     </div>
  </div>
+  <script>
+    function foo(){
+      if( $('[name="store"]').val() != "")
+        $(".modal").modal('show')
+  }
+ </script>
       <script>
   $(function () {
     $('#datetimepicker1').datetimepicker({

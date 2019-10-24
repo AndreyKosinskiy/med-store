@@ -1,6 +1,7 @@
 import openpyxl
 from django.http import HttpResponse
 import time
+from datetime import date
 DOC_TYPE_LIST = ('+','-')
 DOC_TYPE_CELL = 'B1'
 SIZE_OF_HEAD = 3
@@ -43,9 +44,19 @@ def build_book(data_range,table):
     #ws.merge_cells('A1:A3')
     ws.column_dimensions['A'].width = 25
     ws.column_dimensions['C'].width = 15
-    start = data_range[0].date().strftime("%d/%m/%Y")
-    end = data_range[1].date().strftime("%d/%m/%Y")
-    ws['A1'] = f"Срез c {start} по {end}"
+    start,end = None, None
+    if data_range[0]:
+        start = data_range[0].date().strftime("%d/%m/%Y")
+    if data_range[1]:
+        end = data_range[1].date().strftime("%d/%m/%Y")
+    if start and end:
+        ws['A1'] = f"Срез c {start} по {end}"
+    elif not start and end:
+        ws['A1'] = f"Срез до {end}"
+    else:
+        today = date.today()
+        current_data = today.strftime("%m/%d/%y")
+        ws['A1'] = f"Срез до {current_data}"
     ws['A2'] = "Название"
     ws['B2'] = "Партия"
     ws['C2'] = "Количество"
@@ -60,6 +71,9 @@ def build_book(data_range,table):
     response = HttpResponse(stream, content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename="foo.xlsx"'
     return response
+
+
+
 if __name__ == "__main__":   
     document = get_info_from_excel('C:\\Users\\Admin\\Desktop\\put_file.xlsx')
     analyzer_doc(document)

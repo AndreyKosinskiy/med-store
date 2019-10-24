@@ -7,18 +7,44 @@
       {% csrf_token %}
       {{ form.non_field_errors }}
       <div class="form-group">
-        <label for="{{form.attachment.id_for_label}}">Добавить квитанцию</label>
+        <label for="{{form.attachment.id_for_label}}" class = "btn btn-warning btn-lg btn-block" id='name-file'>Натисніть щоб додати квитанцію</label>
         {{form.attachment}}
         {{form.store}}
-        {% for field, errors in form.errors.items %}
-            {{errors|safe}}
-        {% endfor %}
       </div>
-    
+        {% if form.errors%}
+          <h1 class = "text-danger">Операція Відхилена!</h1>
+        {% else %}
+            {% if messages %}
+              {% for message in messages %}
+                {{ message|safe }}
+              {% endfor %}
+            {% endif %}
+        {%  endif %}
+        {% for field, errors in form.errors.items %}
+          {{errors|safe}}
+        {% endfor %} 
 
-   <button type="submit" class="btn btn-primary">Push(+)</button>
-        <button type="submit" class="btn btn-primary">Get(-)</button>
+        <button type="submit" name = "add" value="+" class="btn btn-primary" onclick="return foo();">Push(+)</button>
+        <button type="submit" name = "sub" value="-" class="btn btn-primary" onclick="return foo();">Get(-)</button>
   </form>
     </div>
  </div>
+ <script>
+ $("[type=file]").on("change", function(){
+  // Name of file and placeholder
+  var file = this.files[0].name;
+  if($(this).val()!=""){
+    $("#name-file").text(file);
+  } else {
+     $("#name-file").text("Натисніть щоб додати квитанцію");
+  }
+});
+  function foo(){
+    if( $('[name="store"]').val() != "")
+      $(".modal").modal('show')
+      return "Father"
+  }
+ </script>
+{{ messages|safe }}
+ 
  {% endblock %}

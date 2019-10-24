@@ -3,6 +3,8 @@ from django.forms.utils import ErrorList
 from django.contrib.admin import widgets
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+import datetime
+from datetime import date
 
 from .models import Lot, Operation, Store, Report, Document
 from .utils import get_info_from_excel, is_valid_or_list_error,build_book
@@ -20,22 +22,16 @@ class SignUpForm(UserCreationForm):
 class LogInForm(forms.Form):
     username = forms.CharField(max_length=30, required=False, help_text='Optional.', widget = forms.TextInput(attrs={'class': 'form-control'}))
     password1 = forms.CharField(max_length=30, widget = forms.PasswordInput(attrs={'class': 'form-control'}))
-    
-    # class Meta:
-    #     model = User
-    #     fields = ('email', 'password1' )
 
-
-
-class DivErrorList(ErrorList):
+class ErrorList(ErrorList):
     def __str__(self):
-        return self.as_divs()
+        return self.as_table()
 
-    def as_divs(self):
+    def as_table(self):
         if not self:
             return ''
         else:
-            return '<div class="errorlist">%s</div>' % ''.join(['<div class="error alert alert-danger col-md-12 text-center">%s</div>' % e for e in self])
+            return '<table class="table table-sm"><thead><tr><th scope="col">#</th><th scope="col">Назва</th><th scope="col">Партия</th><th scope="col">Нестача, од</th></tr></thead></tbody>%s</tbody></table>' % ''.join([f'<tr><th scope="row">{idx+1}</th><td>{error_list.split("|")[0]}</td><td>{error_list.split("|")[1]}</td><td>{error_list.split("|")[2]}</td></tr>' for idx,error_list in enumerate(self)])
 
 class DocumentForm(forms.ModelForm):
 
@@ -49,7 +45,8 @@ class DocumentForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         # TODO: I`m not shure what it is not Fail
-        kwargs_new={'error_class': DivErrorList}
+        self.operation_btn = kwargs.pop('operation_btn')
+        kwargs_new={'error_class': ErrorList}
         kwargs_new.update(kwargs)
         super(DocumentForm, self).__init__(*args, **kwargs_new)
 
@@ -57,7 +54,8 @@ class DocumentForm(forms.ModelForm):
     def clean(self):
         cleaned_data=super().clean()
         input_document=cleaned_data.get("attachment")
-        # return table witout header
+        operation_btn = self.operation_btn
+        # # return table witout header
         excel_book=get_info_from_excel(input_document)
         analyzer_result=is_valid_or_list_error(excel_book)
         if analyzer_result != True:
@@ -65,41 +63,43 @@ class DocumentForm(forms.ModelForm):
                 if result == False:
                     self.add_error("attachment", msg+"Fail")
         else:
-
             store= Store.objects.get(name=cleaned_data.get("store"))
+            a = datetime.datetime.now()
             for row in excel_book['good_table']:
-                name, product_item_batch, qty, price=row[0].value, row[1].value, row[3].value, row[4].value
+                #name, product_item_batch, qty, price=row[0].value, row[1].value, row[3].value, row[4].value
+                name, product_item_batch, qty, price = row[2].value, row[1].value, row[5].value, row[7].value
+                if None in (name, product_item_batch, qty, price):
+                    continue
                 # TODO: Can be in one file two or more LOT?
                 is_exists_lot=Lot.objects.filter(
                     product_item_batch=product_item_batch,
                     store=store,
                     name=name
                 ).exists()
-                if excel_book['doc_type'] == '-':
+                if operation_btn == '-':
                     if is_exists_lot:
                         obj_lot=Lot.objects.get(
                             product_item_batch=product_item_batch,
                             store=store,
                             name=name
                         )
-
+                        a = datetime.datetime.now()
                         exists_qty=obj_lot.get_qty_all_operations()
+                        print("exists_qty: ",datetime.datetime.now()-a)
                         if exists_qty < qty:
-                            self.add_error(
-                                "attachment", f"New qty in attachment biggest then qty of product you have now lot {product_item_batch}: you want substruct {qty} but {exists_qty} you have now.")
+                            # self.add_error(
+                            #     "attachment", f"Кількість яку Ви хочете відгрузити по партії {product_item_batch} товара '{name}': кількість для відгрузки {qty}, але {exists_qty} товару Ви маєте на данний момент.")
+                            deficit_count = qty-exists_qty
+                            self.add_error("attachment",  f'{name}|{product_item_batch}|{deficit_count}')
                     elif not is_exists_lot:
-                        self.add_error(
-                            "attachment", f"You want substruct {qty} in {product_item_batch} lot, which not exists.")
+                        # self.add_error(
+                        #     "attachment", f"Ви хочете відгрузити  {qty} одиниць товару '{name}' партия {product_item_batch}, який відсутній на складі.")
+                        deficit_count = "Товар відсутній"
+                        self.add_error("attachment", f'{name}|{product_item_batch}|{deficit_count}')
+            b=datetime.datetime.now()
+            print("for row form: ",b-a)
 
 class ReportForm(forms.Form):
-    all_store = Store.objects.all()
-    list_store_select = []
-    if all_store:
-        print(all_store)
-        for store in all_store:
-            list_store_select.append((store.id, store.name))
-
-
     CHOICES = (('Option 1', 'Option 1'), ('Option 2', 'Option 2'),)
 
     start_date = forms.DateTimeField(
@@ -107,30 +107,32 @@ class ReportForm(forms.Form):
         widget=forms.DateTimeInput(attrs={
             'class': 'form-control datetimepicker-input',
             'data-target': '#datetimepicker1'
-        })
+        }),
+        required = False
     )
     end_date = forms.DateTimeField(
         input_formats=['%d/%m/%Y'],
         widget=forms.DateTimeInput(attrs={
             'class': 'form-control datetimepicker-input',
             'data-target': '#datetimepicker1'
-        })
+        }),
+        required = False
     )
-    store = forms.ChoiceField(
-        choices=list_store_select, 
-        widget=forms.Select(attrs={'class': 'custom-select'})
+    store = forms.ModelChoiceField(
+        queryset=Store.objects.all(), 
+        widget=forms.Select(
+            attrs={'class': 'custom-select'}
+        )
     )
-    def save(self):
-        
-        store = Store.objects.get(id=self.cleaned_data["store"])
-        
 
+    def save(self):
+        store = self.cleaned_data["store"]#Store.objects.get(id=self.cleaned_data["store"])
         start_date = self.cleaned_data["start_date"]
         end_date = self.cleaned_data["end_date"]
         Report.objects.create(
             store = store,
-            start_date = self.cleaned_data["start_date"],
-            end_date = self.cleaned_data["end_date"]
+            start_date = start_date,
+            end_date = end_date
         )
         lots_in_store = Lot.objects.filter(store = store)
         report_table = []
@@ -138,6 +140,9 @@ class ReportForm(forms.Form):
             report_table.append([lot.name,lot.product_item_batch,lot.get_qty_all_operations(start_date,end_date)])
         print(report_table)
         response = build_book([start_date,end_date],report_table)
-        print("Ау блять!")
-        return response
-        
+        if start_date:
+            start_date = start_date.date().strftime("%d/%m/%Y")
+        if end_date:
+            end_date = end_date.date().strftime("%d/%m/%Y")
+        #return response
+        return start_date, end_date, report_table
