@@ -1,15 +1,19 @@
 from django.db import models
 from django.core.validators import FileExtensionValidator
 from django.utils.timezone import now
-from .utils import get_info_from_excel, is_valid_or_list_error,build_book
-from django.utils.dateparse import parse_datetime
-import datetime
+from django.db import connection
 from django.contrib.auth.models import User
+from django.utils.dateparse import parse_datetime
+
+from .utils import get_info_from_excel, is_valid_or_list_error, build_book
+import datetime
+
 # TODO:create manager for Document
 
 
 class LogHandler(models.Model):
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING,blank=True, null=True)
+    user = models.ForeignKey(
+        User, on_delete=models.DO_NOTHING, blank=True, null=True)
     action_object = models.CharField(max_length=120, null=True)
     action_method = models.CharField(max_length=120, null=True)
     action_result = models.CharField(max_length=120, null=True)
@@ -21,7 +25,8 @@ class ErorrHandler(models.Model):
 
 
 class BaseClassObject(models.Model):
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING,blank=True, null=True)
+    user = models.ForeignKey(
+        User, on_delete=models.DO_NOTHING, blank=True, null=True)
     name = models.CharField(max_length=120)
     created_date = models.DateTimeField(auto_now_add=True)
 
@@ -29,7 +34,8 @@ class BaseClassObject(models.Model):
         abstract = True
 
     def save(self, *args, **kwargs):
-        super(BaseClassObject, self).save(*args, **kwargs)  # Call the real save() method
+        super(BaseClassObject, self).save(
+            *args, **kwargs)  # Call the real save() method
         # LogHandler.objects.create(
         #     user = self.user,
         #     action_object=self.__class__,
@@ -63,46 +69,46 @@ class Document(BaseClassObject):
         print("Model: ", self.user)
         user = self.user
         self.name = self.attachment.name
-        #self.doc_type = self.get_doc_type()
         self.doc_type = self.operation_btn
         super(Document, self).save(*args, **kwargs)
+        
+        store = self.store
         table = self.get_table()
-        a = datetime.datetime.now()
+        obj_operations = []
+        lot_qs_by_store = Lot.objects.all().select_related("store").filter(store=store)
         for row in table:
-                #name, product_item_batch, qty, price = row[0].value, row[1].value, row[3].value, row[4].value
-                name, product_item_batch, qty, price = row[2].value, row[1].value, row[5].value, row[7].value
-                if None in (name, product_item_batch, qty, price):
-                    continue
-                if isinstance(qty,(str,)):
-                    qty = float(qty)
-                if isinstance(price,(str,)):
-                    price = float(price)
-                lot_qs = None
-                lot_qs = Lot.objects.filter( product_item_batch=product_item_batch, store=self.store,name=name)
+            name, product_item_batch, qty, price = row[2].value, row[1].value, row[5].value, row[7].value
+            if None in (name, product_item_batch, qty, price):
+                continue
+            if isinstance(qty, str,):
+                qty = float(qty.replace(',', '.'))
+            elif isinstance(price, str,):
+                price = float(price.replace(',', '.'))
+            lot_qs_by_instance = lot_qs_by_store.filter(
+                product_item_batch=product_item_batch, 
+                name=name
+            )
+            a = datetime.datetime.now()
+            obj_lot,created =lot_qs_by_instance.get_or_create(
+                user=user,
+                store = store,
+                product_item_batch=product_item_batch,
+                name=name
+            )
+            print("for row procces in isinstance: ", datetime.datetime.now()-a)
+            obj_operations.append(Operation(
+                user=user,
+                name=obj_lot.name +
+                ' [ '+self.doc_type+' ] ' +
+                str(qty)+' штуки по цене '+str(price),
+                lot=obj_lot,
+                document=self,
+                operation_type=self.doc_type,
+                price=price,
+                qty=qty
+            ))
+        Operation.objects.bulk_create(obj_operations)
 
-                if lot_qs.count() == 0:
-                    obj_lot = Lot.objects.create(
-                        user = user,
-                        product_item_batch=product_item_batch,
-                        store=self.store,
-                        name=name
-                    )
-                else:
-                     obj_lot = lot_qs.first()
-                c = datetime.datetime.now()
-                obj_operation = Operation.objects.create(
-                    user = user,
-                    name=obj_lot.name +
-                        ' [ '+self.doc_type+' ] ' +
-                            str(qty)+' штуки по цене '+str(price),
-                    lot=obj_lot,
-                    document=self,
-                    operation_type=self.doc_type,
-                    price=price,
-                    qty=qty
-                )
-                print("Operation.objects.create: ",datetime.datetime.now()-c)
-        print("for row procces in model: ",datetime.datetime.now()-a)
 
 
 class Lot(BaseClassObject):
@@ -117,14 +123,14 @@ class Lot(BaseClassObject):
         operation_list = None
 
         if start_date == None and end_date == None:
-            print("start_date == None and end_date == None")
+            #print("start_date == None and end_date == None")
             operation_list = Operation.objects.filter(lot=self)
         elif start_date == None:
-            print("start_date == None")
+           # print("start_date == None")
             operation_list = Operation.objects.filter(
                 lot=self, created_date__date__lte=end_date)
         elif end_date == None:
-            print("end_date == None")
+            #print("end_date == None")
             operation_list = Operation.objects.filter(
                 lot=self, created_date__date__gte=start_date)
         else:
@@ -155,5 +161,3 @@ class Report (BaseClassObject):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     start_date = models.DateTimeField(editable=True, blank=True, null=True)
     end_date = models.DateTimeField(editable=True, blank=True, null=True)
-        
-        

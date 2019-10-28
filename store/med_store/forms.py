@@ -3,6 +3,8 @@ from django.forms.utils import ErrorList
 from django.contrib.admin import widgets
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.db.models import Q
+
 import datetime
 from datetime import date
 
@@ -65,39 +67,30 @@ class DocumentForm(forms.ModelForm):
         else:
             store= Store.objects.get(name=cleaned_data.get("store"))
             a = datetime.datetime.now()
+            lots_qs = Lot.objects.all().select_related("store").filter(store=store)
             for row in excel_book['good_table']:
                 #name, product_item_batch, qty, price=row[0].value, row[1].value, row[3].value, row[4].value
                 name, product_item_batch, qty, price = row[2].value, row[1].value, row[5].value, row[7].value
                 if None in (name, product_item_batch, qty, price):
                     continue
                 # TODO: Can be in one file two or more LOT?
-                is_exists_lot=Lot.objects.filter(
-                    product_item_batch=product_item_batch,
-                    store=store,
-                    name=name
-                ).exists()
                 if operation_btn == '-':
+                    obj_lot = lots_qs.filter(
+                        product_item_batch=product_item_batch,
+                        name=name
+                    )
+                    is_exists_lot = obj_lot.exists()
                     if is_exists_lot:
-                        obj_lot=Lot.objects.get(
-                            product_item_batch=product_item_batch,
-                            store=store,
-                            name=name
-                        )
-                        a = datetime.datetime.now()
+                        obj_lot = obj_lot.first()
                         exists_qty=obj_lot.get_qty_all_operations()
-                        print("exists_qty: ",datetime.datetime.now()-a)
                         if exists_qty < qty:
-                            # self.add_error(
-                            #     "attachment", f"Кількість яку Ви хочете відгрузити по партії {product_item_batch} товара '{name}': кількість для відгрузки {qty}, але {exists_qty} товару Ви маєте на данний момент.")
                             deficit_count = qty-exists_qty
                             self.add_error("attachment",  f'{name}|{product_item_batch}|{deficit_count}')
                     elif not is_exists_lot:
-                        # self.add_error(
-                        #     "attachment", f"Ви хочете відгрузити  {qty} одиниць товару '{name}' партия {product_item_batch}, який відсутній на складі.")
                         deficit_count = "Товар відсутній"
                         self.add_error("attachment", f'{name}|{product_item_batch}|{deficit_count}')
-            b=datetime.datetime.now()
-            print("for row form: ",b-a)
+        b=datetime.datetime.now()
+        print("Lot exists: ",b-a)
 
 class ReportForm(forms.Form):
     CHOICES = (('Option 1', 'Option 1'), ('Option 2', 'Option 2'),)
