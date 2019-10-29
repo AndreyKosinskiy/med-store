@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 
+import datetime
 from .forms import DocumentForm, ReportForm, SignUpForm, LogInForm
 
 # Create your views here.
@@ -51,6 +52,7 @@ def signup(request):
 def index(request):
     if request.method == 'POST':
         # it is go to clean form metod
+        a = datetime.datetime.now()
         if request.POST.get("add"):
             operation_btn = request.POST.get("add")
             operation_msg = "Push+"
@@ -71,6 +73,7 @@ def index(request):
                              f'<h1 class = "text-success">Операція Виконана {operation_msg}!</h1>',
                              extra_tags='safe')
             # return render(request, 'add_doc.html', {'form':  DocumentForm()})
+            print("time for view: ",datetime.datetime.now()-a)
             return redirect('med_store:index')
     else:
         form = DocumentForm(operation_btn=None)

@@ -66,7 +66,7 @@ class DocumentForm(forms.ModelForm):
                     self.add_error("attachment", msg+"Fail")
         else:
             store= Store.objects.get(name=cleaned_data.get("store"))
-            a = datetime.datetime.now()
+            
             lots_qs = Lot.objects.all().select_related("store").filter(store=store)
             for row in excel_book['good_table']:
                 #name, product_item_batch, qty, price=row[0].value, row[1].value, row[3].value, row[4].value
@@ -75,22 +75,26 @@ class DocumentForm(forms.ModelForm):
                     continue
                 # TODO: Can be in one file two or more LOT?
                 if operation_btn == '-':
+                    
                     obj_lot = lots_qs.filter(
-                        product_item_batch=product_item_batch,
-                        name=name
+                        product_item_batch=product_item_batch
                     )
+                    
+                    
                     is_exists_lot = obj_lot.exists()
                     if is_exists_lot:
                         obj_lot = obj_lot.first()
+                        c = datetime.datetime.now()
                         exists_qty=obj_lot.get_qty_all_operations()
+                        
                         if exists_qty < qty:
                             deficit_count = qty-exists_qty
                             self.add_error("attachment",  f'{name}|{product_item_batch}|{deficit_count}')
                     elif not is_exists_lot:
                         deficit_count = "Товар відсутній"
                         self.add_error("attachment", f'{name}|{product_item_batch}|{deficit_count}')
-        b=datetime.datetime.now()
-        print("Lot exists: ",b-a)
+        
+        
 
 class ReportForm(forms.Form):
     CHOICES = (('Option 1', 'Option 1'), ('Option 2', 'Option 2'),)

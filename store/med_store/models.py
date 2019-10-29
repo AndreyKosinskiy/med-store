@@ -88,14 +88,14 @@ class Document(BaseClassObject):
                 product_item_batch=product_item_batch, 
                 name=name
             )
-            a = datetime.datetime.now()
+            
             obj_lot,created =lot_qs_by_instance.get_or_create(
                 user=user,
                 store = store,
                 product_item_batch=product_item_batch,
                 name=name
             )
-            print("for row procces in isinstance: ", datetime.datetime.now()-a)
+           
             obj_operations.append(Operation(
                 user=user,
                 name=obj_lot.name +
@@ -112,8 +112,11 @@ class Document(BaseClassObject):
 
 
 class Lot(BaseClassObject):
-    product_item_batch = models.CharField(max_length=120)
+    product_item_batch = models.IntegerField()
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
+
+    class Meta:
+        indexes = [models.Index(fields=['product_item_batch'])]
 
     def get_qty_all_operations(self, start_date=None, end_date=None):
         """

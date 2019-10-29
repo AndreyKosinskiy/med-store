@@ -10,6 +10,8 @@ django = "*"
 openpyxl = "*"
 django-debug-toolbar = "*"
 psycopg2 = "*"
+django-extensions = "*"
+werkzeug = "*"
 
 [requires]
 python_version = "3.7"

@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'med_store.apps.MedStoreConfig',
     'crypto_auth.apps.CryptoAuthConfig',
     'debug_toolbar',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -141,3 +142,19 @@ INTERNAL_IPS = [
 ]
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'console': {
+#             'level': 'DEBUG',
+#             'class': 'logging.StreamHandler',
+#         }
+#     },
+#     'loggers': {
+#         'django.db.backends': {
+#             'handlers': ['console'],
+#             'level': 'DEBUG',
+#         },
+#     }
+# }
